@@ -244,3 +244,5 @@ NGX_ADDON_SRCS="$NGX_ADDON_SRCS                                     \
                 $ngx_addon_dir/vod/write_buffer.c                   \
                 $ngx_addon_dir/vod/write_buffer_queue.c             \
                 "
+
+CFLAGS="$CFLAGS -Wno-deprecated-declarations"

@@ -859,11 +859,6 @@ ngx_http_vod_parse_uri_path(
   {
     if (try_suburis_middles != NGX_CONF_UNSET_PTR)
     {
-      ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                     "ngx_http_vod_request_parse: TRY SUBURIS %d, %V",
-                     try_suburis_middles->nelts,
-                     ((ngx_str_t *) try_suburis_middles->elts));
-
       multi_uri.parts_count = try_suburis_middles->nelts;
       multi_uri.postfix = *try_suburis_postfix;
 
@@ -880,9 +875,6 @@ ngx_http_vod_parse_uri_path(
       sequences_mask = 0xffffffff;
     }
   }
-
-  ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                 "ngx_http_vod_request_parse: %d MULTI URI PARTS", multi_uri.parts_count);
 
   parts_mask = (1 << multi_uri.parts_count) - 1;
 

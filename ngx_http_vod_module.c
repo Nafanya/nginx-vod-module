@@ -162,6 +162,8 @@ struct ngx_http_vod_ctx_s {
   void* frame_processor_state;
   ngx_chain_t out;
   ngx_http_vod_write_segment_context_t write_segment_buffer_context;
+
+  bool_t any_media_found;
 };
 
 // forward declarations
@@ -1528,7 +1530,6 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
   media_clip_source_t* cur_source;
   ngx_http_request_t* r = ctx->submodule_context.r;
   ngx_int_t rc;
-  bool_t any_media_found = 0;
 
   if (ctx->cur_source == NULL)
   {
@@ -1565,7 +1566,7 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
           if (rc == NGX_OK)
           {
             // Indicate that we had found at least 1 file
-            any_media_found = 1;
+            ctx->any_media_found = 1;
 
             ctx->cur_source = cur_source->next;
             if (ctx->cur_source == NULL)
@@ -1612,7 +1613,7 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
           ctx->cur_source = cur_source->next;
           if (ctx->cur_source == NULL)
           {
-            if (any_media_found == 0)
+            if (ctx->any_media_found == 0)
             {
               return rc;
             }
@@ -1628,8 +1629,6 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
         return rc;
       }
 
-      // Indicate that we had found at least 1 file
-      any_media_found = 1;
       break;
 
     case STATE_READ_METADATA_OPEN_FILE:
@@ -1726,6 +1725,9 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
         // move to the next source
         ctx->state = STATE_READ_METADATA_INITIAL;
 
+        // Indicate that we had found at least 1 file
+        ctx->any_media_found = 1;
+
         ctx->cur_source = cur_source->next;
         if (ctx->cur_source == NULL)
         {
@@ -1755,6 +1757,9 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
 
       // move to the next source
       ctx->state = STATE_READ_METADATA_INITIAL;
+
+      // Indicate that we had found at least 1 file
+      ctx->any_media_found = 1;
 
       ctx->cur_source = ctx->cur_source->next;
       if (ctx->cur_source == NULL)
@@ -4442,6 +4447,7 @@ ngx_http_vod_handler(ngx_http_request_t *r)
   ctx->submodule_context.request_context.log = r->connection->log;
   ctx->submodule_context.request_context.output_buffer_pool = conf->output_buffer_pool;
   ctx->perf_counters = perf_counters;
+  ctx->any_media_found = 0;
   ngx_perf_counter_copy(ctx->total_perf_counter_context, pcctx);
 
   clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);

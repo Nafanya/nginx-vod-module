@@ -696,8 +696,7 @@ ngx_http_vod_cache_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static char *
 ngx_http_vod_try_suburis_middle_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-  char  *p = conf;
-
+  char              *p = conf;
   ngx_str_t         *value, *s;
   ngx_array_t      **a;
   ngx_conf_post_t   *post;

@@ -1528,6 +1528,7 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
   media_clip_source_t* cur_source;
   ngx_http_request_t* r = ctx->submodule_context.r;
   ngx_int_t rc;
+  bool_t any_media_found = 0;
 
   if (ctx->cur_source == NULL)
   {
@@ -1563,6 +1564,9 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
           rc = ngx_http_vod_parse_metadata(ctx, 1);
           if (rc == NGX_OK)
           {
+            // Indicate that we had found at least 1 file
+            any_media_found = 1;
+
             ctx->cur_source = cur_source->next;
             if (ctx->cur_source == NULL)
             {
@@ -1596,13 +1600,36 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
       rc = ctx->open_file(r, &cur_source->mapped_uri, &cur_source->reader_context);
       if (rc != NGX_OK)
       {
-        if (rc != NGX_AGAIN && rc != NGX_DONE)
+        if (rc == NGX_HTTP_NOT_FOUND)
+        {
+          // Skip file which is not found and go to next
+          ctx->state = STATE_READ_METADATA_INITIAL;
+
+          ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                         "ngx_http_vod_state_machine_parse_metadata: file \"%V\" not found, skipping",
+                         &cur_source->mapped_uri);
+
+          ctx->cur_source = cur_source->next;
+          if (ctx->cur_source == NULL)
+          {
+            if (any_media_found == 0)
+            {
+              return rc;
+            }
+            return NGX_OK;
+          }
+          break;
+        }
+        else if (rc != NGX_AGAIN && rc != NGX_DONE)
         {
           ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
             "ngx_http_vod_state_machine_parse_metadata: open_file failed %i", rc);
         }
         return rc;
       }
+
+      // Indicate that we had found at least 1 file
+      any_media_found = 1;
       break;
 
     case STATE_READ_METADATA_OPEN_FILE:

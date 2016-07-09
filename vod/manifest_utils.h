@@ -47,6 +47,7 @@ vod_status_t manifest_utils_build_request_params_string(
 	uint32_t* sequence_tracks_mask,
 	uint32_t* tracks_mask,
 	vod_str_t* suffix,
+	vod_str_t* args_str,
 	vod_str_t* result);
 
 u_char* manifest_utils_append_tracks_spec(u_char* p, media_track_t** tracks, bool_t write_sequence_index);

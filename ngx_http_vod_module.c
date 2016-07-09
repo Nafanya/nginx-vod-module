@@ -404,6 +404,7 @@ ngx_http_vod_set_request_params_var(ngx_http_request_t *r, ngx_http_variable_val
     request_params->sequence_tracks_mask,
     request_params->tracks_mask,
     &empty_string,
+    &empty_string,
     &value);
   if (rc != VOD_OK)
   {

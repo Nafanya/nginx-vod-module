@@ -50,6 +50,7 @@ vod_status_t dash_packager_build_mpd(
 	request_context_t* request_context,
 	dash_manifest_config_t* conf,
 	vod_str_t* base_url,
+	vod_str_t* args_str,
 	media_set_t* media_set,
 	size_t representation_tags_size,
 	write_tags_callback_t write_representation_tags,

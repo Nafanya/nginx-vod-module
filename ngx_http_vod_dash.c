@@ -13,7 +13,7 @@
 #define SUPPORTED_CODECS_WEBM (VOD_CODEC_FLAG(VP8) | VOD_CODEC_FLAG(VP9) | VOD_CODEC_FLAG(VORBIS) | VOD_CODEC_FLAG(OPUS))
 #define SUPPORTED_CODECS (SUPPORTED_CODECS_MP4 | SUPPORTED_CODECS_WEBM)
 
-ngx_conf_enum_t  dash_manifest_formats[] = {
+ngx_conf_enum_t	 dash_manifest_formats[] = {
 	{ ngx_string("segmentlist"), FORMAT_SEGMENT_LIST },
 	{ ngx_string("segmenttemplate"), FORMAT_SEGMENT_TEMPLATE },
 	{ ngx_string("segmenttimeline"), FORMAT_SEGMENT_TIMELINE },
@@ -35,7 +35,7 @@ static const u_char fragment_file_ext[] = ".m4s";
 static const u_char webm_file_ext[] = ".webm";
 static const u_char vtt_file_ext[] = ".vtt";
 
-static ngx_int_t 
+static ngx_int_t
 ngx_http_vod_dash_handle_manifest(
 	ngx_http_vod_submodule_context_t* submodule_context,
 	ngx_str_t* response,
@@ -43,6 +43,7 @@ ngx_http_vod_dash_handle_manifest(
 {
 	ngx_http_vod_loc_conf_t* conf = submodule_context->conf;
 	ngx_str_t base_url = ngx_null_string;
+	ngx_str_t args_str = ngx_null_string;
 	vod_status_t rc;
 	ngx_str_t file_uri;
 
@@ -65,12 +66,21 @@ ngx_http_vod_dash_handle_manifest(
 		}
 	}
 
+	if (conf->manifest_urls_args) {
+		rc = ngx_http_complex_value(submodule_context->r, conf->manifest_urls_args, &args_str);
+		if (rc != NGX_OK)
+		{
+			return rc;
+		}
+	}
+
 	if (conf->drm_enabled)
 	{
 		rc = edash_packager_build_mpd(
 			&submodule_context->request_context,
 			&conf->dash.mpd_config,
 			&base_url,
+			&args_str,
 			&submodule_context->media_set,
 			response);
 	}
@@ -80,6 +90,7 @@ ngx_http_vod_dash_handle_manifest(
 			&submodule_context->request_context,
 			&conf->dash.mpd_config,
 			&base_url,
+			&args_str,
 			&submodule_context->media_set,
 			0,
 			NULL,
@@ -168,7 +179,7 @@ ngx_http_vod_dash_mp4_init_frame_processor(
 	bool_t reuse_buffers = FALSE;
 	bool_t size_only = ngx_http_vod_submodule_size_only(submodule_context);
 
-	if (conf->drm_enabled && 
+	if (conf->drm_enabled &&
 		submodule_context->request_params.segment_index >= conf->drm_clear_lead_segment_count)
 	{
 		// encyrpted fragment
@@ -351,7 +362,7 @@ ngx_http_vod_dash_handle_vtt_file(
 	ngx_str_t* content_type)
 {
 	vod_status_t rc;
-	
+
 	rc = webvtt_builder_build(
 		&submodule_context->request_context,
 		&submodule_context->media_set,

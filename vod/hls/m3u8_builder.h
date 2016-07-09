@@ -8,7 +8,7 @@
 
 // constants
 #define MAX_IFRAMES_M3U8_HEADER_SIZE (sizeof(iframes_m3u8_header_format) + VOD_INT64_LEN)
-	
+
 static const char iframes_m3u8_header_format[] = "#EXTM3U\n#EXT-X-TARGETDURATION:%d\n#EXT-X-VERSION:4\n#EXT-X-MEDIA-SEQUENCE:1\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-I-FRAMES-ONLY\n";
 
 // typedefs
@@ -28,6 +28,7 @@ vod_status_t m3u8_builder_build_master_playlist(
 	request_context_t* request_context,
 	m3u8_config_t* conf,
 	vod_str_t* base_url,
+	vod_str_t* args_str,
 	media_set_t* media_set,
 	vod_str_t* result);
 
@@ -35,6 +36,7 @@ vod_status_t m3u8_builder_build_index_playlist(
 	request_context_t* request_context,
 	m3u8_config_t* conf,
 	vod_str_t* base_url,
+	vod_str_t* args_str,
 	vod_str_t* segments_base_url,
 	request_params_t* request_params,
 	hls_encryption_params_t* encryption_params,
@@ -46,6 +48,7 @@ vod_status_t m3u8_builder_build_iframe_playlist(
 	m3u8_config_t* conf,
 	hls_muxer_conf_t* muxer_conf,
 	vod_str_t* base_url,
+	vod_str_t* args_str,
 	request_params_t* request_params,
 	media_set_t* media_set,
 	vod_str_t* result);

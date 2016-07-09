@@ -10,10 +10,10 @@
 
 // manifest constants
 #define VOD_EDASH_MANIFEST_CONTENT_PROTECTION_CENC									\
-	"        <ContentProtection schemeIdUri=\"urn:mpeg:dash:mp4protection:2011\" value=\"cenc\"/>\n"
+	"				 <ContentProtection schemeIdUri=\"urn:mpeg:dash:mp4protection:2011\" value=\"cenc\"/>\n"
 
 #define VOD_EDASH_MANIFEST_CONTENT_PROTECTION_PREFIX								\
-	"        <ContentProtection schemeIdUri=\"urn:uuid:"
+	"				 <ContentProtection schemeIdUri=\"urn:uuid:"
 
 #define VOD_EDASH_MANIFEST_CONTENT_PROTECTION_SUFFIX								\
 	"\"/>\n"
@@ -63,7 +63,7 @@ typedef struct {
 
 ////// mpd functions
 
-static u_char* 
+static u_char*
 edash_packager_write_content_protection(void* context, u_char* p, media_track_t* track)
 {
 	drm_info_t* drm_info = (drm_info_t*)track->file_info.drm_info;
@@ -84,6 +84,7 @@ edash_packager_build_mpd(
 	request_context_t* request_context,
 	dash_manifest_config_t* conf,
 	vod_str_t* base_url,
+	vod_str_t* args_str,
 	media_set_t* media_set,
 	vod_str_t* result)
 {
@@ -99,8 +100,8 @@ edash_packager_build_mpd(
 	{
 		drm_info = (drm_info_t*)cur_sequence->drm_info;
 
-		cur_drm_tags_size = 
-			sizeof(VOD_EDASH_MANIFEST_CONTENT_PROTECTION_CENC) - 1 + 
+		cur_drm_tags_size =
+			sizeof(VOD_EDASH_MANIFEST_CONTENT_PROTECTION_CENC) - 1 +
 			(sizeof(VOD_EDASH_MANIFEST_CONTENT_PROTECTION_PREFIX) - 1 +
 				VOD_GUID_LENGTH +
 			sizeof(VOD_EDASH_MANIFEST_CONTENT_PROTECTION_SUFFIX) - 1) * drm_info->pssh_array.count;
@@ -111,6 +112,7 @@ edash_packager_build_mpd(
 		request_context,
 		conf,
 		base_url,
+		args_str,
 		media_set,
 		representation_tags_size,
 		edash_packager_write_content_protection,
@@ -131,8 +133,8 @@ edash_packager_build_mpd(
 static vod_status_t
 edash_packager_init_stsd_writer_context(
 	request_context_t* request_context,
-	uint32_t media_type, 
-	raw_atom_t* original_stsd, 
+	uint32_t media_type,
+	raw_atom_t* original_stsd,
 	bool_t has_clear_lead,
 	u_char* default_kid,
 	stsd_writer_context_t* result)
@@ -163,9 +165,9 @@ edash_packager_init_stsd_writer_context(
 	result->schi_atom_size = ATOM_HEADER_SIZE + result->tenc_atom_size;
 	result->schm_atom_size = ATOM_HEADER_SIZE + sizeof(schm_atom_t);
 	result->frma_atom_size = ATOM_HEADER_SIZE + sizeof(frma_atom_t);
-	result->sinf_atom_size = ATOM_HEADER_SIZE + 
-		result->frma_atom_size + 
-		result->schm_atom_size + 
+	result->sinf_atom_size = ATOM_HEADER_SIZE +
+		result->frma_atom_size +
+		result->schm_atom_size +
 		result->schi_atom_size;
 	result->encrypted_stsd_entry_size = result->original_stsd_entry_size + result->sinf_atom_size;
 	result->stsd_atom_size = ATOM_HEADER_SIZE + sizeof(stsd_atom_t) + result->encrypted_stsd_entry_size;
@@ -195,7 +197,7 @@ edash_packager_write_stsd(void* ctx, u_char* p)
 
 	// sinf
 	write_atom_header(p, context->sinf_atom_size, 's', 'i', 'n', 'f');
-	
+
 	// sinf.frma
 	write_atom_header(p, context->frma_atom_size, 'f', 'r', 'm', 'a');
 	write_be32(p, context->original_stsd_entry_format);
@@ -330,15 +332,15 @@ edash_packager_video_write_encryption_atoms(void* context, u_char* p, size_t mda
 static vod_status_t
 edash_packager_video_build_fragment_header(
 	mp4_encrypt_video_state_t* state,
-	vod_str_t* fragment_header, 
+	vod_str_t* fragment_header,
 	size_t* total_fragment_size)
 {
 	dash_fragment_header_extensions_t header_extensions;
 
 	// get the header extensions
-	header_extensions.extra_traf_atoms_size = 
-		state->base.saiz_atom_size + 
-		state->base.saio_atom_size + 
+	header_extensions.extra_traf_atoms_size =
+		state->base.saiz_atom_size +
+		state->base.saio_atom_size +
 		ATOM_HEADER_SIZE + sizeof(senc_atom_t) + state->auxiliary_data.pos - state->auxiliary_data.start;
 	header_extensions.write_extra_traf_atoms_callback = edash_packager_video_write_encryption_atoms;
 	header_extensions.write_extra_traf_atoms_context = state;
@@ -388,8 +390,8 @@ edash_packager_audio_build_fragment_header(
 
 	// get the header extensions
 	header_extensions.extra_traf_atoms_size =
-		state->saiz_atom_size + 
-		state->saio_atom_size + 
+		state->saiz_atom_size +
+		state->saio_atom_size +
 		ATOM_HEADER_SIZE + sizeof(senc_atom_t) + MP4_AES_CTR_IV_SIZE * state->sequence->total_frame_count;
 	header_extensions.write_extra_traf_atoms_callback = edash_packager_audio_write_encryption_atoms;
 	header_extensions.write_extra_traf_atoms_context = state;
@@ -438,8 +440,8 @@ edash_packager_passthrough_write_encryption_atoms(void* ctx, u_char* p, size_t m
 	for (cur_clip = sequence->filtered_clips; cur_clip < sequence->filtered_clips_end; cur_clip++)
 	{
 		cur_track = cur_clip->first_track;
-		p = vod_copy(p, 
-			cur_track->encryption_info.auxiliary_info, 
+		p = vod_copy(p,
+			cur_track->encryption_info.auxiliary_info,
 			cur_track->encryption_info.auxiliary_info_end - cur_track->encryption_info.auxiliary_info);
 	}
 
@@ -501,24 +503,24 @@ edash_packager_get_fragment_writer(
 	{
 	case MEDIA_TYPE_VIDEO:
 		return mp4_encrypt_video_get_fragment_writer(
-			result, 
-			request_context, 
-			media_set, 
-			segment_index, 
+			result,
+			request_context,
+			media_set,
+			segment_index,
 			single_nalu_per_frame,
 			edash_packager_video_build_fragment_header,
-			segment_writer, 
-			iv, 
+			segment_writer,
+			iv,
 			fragment_header,
 			total_fragment_size);
 
 	case MEDIA_TYPE_AUDIO:
 		rc = mp4_encrypt_audio_get_fragment_writer(
-			result, 
-			request_context, 
+			result,
+			request_context,
 			media_set,
-			segment_index, 
-			segment_writer, 
+			segment_index,
+			segment_writer,
 			iv);
 		if (rc != VOD_OK)
 		{

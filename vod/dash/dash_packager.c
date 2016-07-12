@@ -11,8 +11,8 @@
 #define VOD_DASH_MAX_FRAME_RATE_LEN (1 + 2 * VOD_INT32_LEN)
 
 #define VOD_DASH_MANIFEST_HEADER_VOD											\
-    "<?xml version=\"1.0\"?>\n"													\
-    "<MPD\n"																	\
+		"<?xml version=\"1.0\"?>\n"													\
+		"<MPD\n"																	\
 	"    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"				\
 	"    xmlns=\"urn:mpeg:dash:schema:mpd:2011\"\n"								\
 	"    xsi:schemaLocation=\"urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"	\
@@ -48,53 +48,53 @@
 	"  <Period id=\"0\" start=\"PT0S\">\n"
 
 #define VOD_DASH_MANIFEST_ADAPTATION_HEADER_VIDEO								\
-    "    <AdaptationSet\n"														\
-    "        id=\"1\"\n"														\
-    "        segmentAlignment=\"true\"\n"										\
-    "        maxWidth=\"%uD\"\n"												\
-    "        maxHeight=\"%uD\"\n"												\
-    "        maxFrameRate=\"%V\">\n"
+		"    <AdaptationSet\n"														\
+		"        id=\"1\"\n"														\
+		"        segmentAlignment=\"true\"\n"										\
+		"        maxWidth=\"%uD\"\n"												\
+		"        maxHeight=\"%uD\"\n"												\
+		"        maxFrameRate=\"%V\">\n"
 
 #define VOD_DASH_MANIFEST_REPRESENTATION_HEADER_VIDEO							\
 	"      <Representation\n"													\
-    "          id=\"%V\"\n"														\
-    "          mimeType=\"%V\"\n"												\
-    "          codecs=\"%V\"\n"													\
-    "          width=\"%uD\"\n"													\
-    "          height=\"%uD\"\n"												\
-    "          frameRate=\"%V\"\n"												\
-    "          sar=\"1:1\"\n"													\
-    "          startWithSAP=\"1\"\n"											\
+		"          id=\"%V\"\n"														\
+		"          mimeType=\"%V\"\n"												\
+		"          codecs=\"%V\"\n"													\
+		"          width=\"%uD\"\n"													\
+		"          height=\"%uD\"\n"												\
+		"          frameRate=\"%V\"\n"												\
+		"          sar=\"1:1\"\n"													\
+		"          startWithSAP=\"1\"\n"											\
 	"          bandwidth=\"%uD\">\n"
 
 // TODO: value should be the number of channels ?
 #define VOD_DASH_MANIFEST_ADAPTATION_HEADER_AUDIO								\
-    "    <AdaptationSet\n"														\
-    "        id=\"2\"\n"														\
-    "        segmentAlignment=\"true\">\n"										\
-    "      <AudioChannelConfiguration\n"										\
-    "          schemeIdUri=\"urn:mpeg:dash:"									\
-                                "23003:3:audio_channel_configuration:2011\"\n"	\
-    "          value=\"1\"/>\n"
+		"    <AdaptationSet\n"														\
+		"        id=\"2\"\n"														\
+		"        segmentAlignment=\"true\">\n"										\
+		"      <AudioChannelConfiguration\n"										\
+		"          schemeIdUri=\"urn:mpeg:dash:"									\
+																"23003:3:audio_channel_configuration:2011\"\n"	\
+		"          value=\"1\"/>\n"
 
 #define VOD_DASH_MANIFEST_ADAPTATION_HEADER_AUDIO_LANG							\
-    "    <AdaptationSet\n"														\
+		"    <AdaptationSet\n"														\
 	"        id=\"%uD\"\n"														\
 	"        lang=\"%s\"\n"														\
 	"        segmentAlignment=\"true\">\n"										\
-    "      <AudioChannelConfiguration\n"										\
-    "          schemeIdUri=\"urn:mpeg:dash:"									\
-                                "23003:3:audio_channel_configuration:2011\"\n"	\
-    "          value=\"1\"/>\n"
+		"      <AudioChannelConfiguration\n"										\
+		"          schemeIdUri=\"urn:mpeg:dash:"									\
+																"23003:3:audio_channel_configuration:2011\"\n"	\
+		"          value=\"1\"/>\n"
 
 #define VOD_DASH_MANIFEST_REPRESENTATION_HEADER_AUDIO							\
 	"      <Representation\n"													\
 	"          id=\"%V\"\n"														\
-    "          mimeType=\"%V\"\n"												\
-    "          codecs=\"%V\"\n"													\
-    "          audioSamplingRate=\"%uD\"\n"										\
-    "          startWithSAP=\"1\"\n"											\
-    "          bandwidth=\"%uD\">\n"
+		"          mimeType=\"%V\"\n"												\
+		"          codecs=\"%V\"\n"													\
+		"          audioSamplingRate=\"%uD\"\n"										\
+		"          startWithSAP=\"1\"\n"											\
+		"          bandwidth=\"%uD\">\n"
 
 #define VOD_DASH_MANIFEST_REPRESENTATION_FOOTER									\
 	"      </Representation>\n"
@@ -118,8 +118,8 @@
 #define VOD_DASH_MANIFEST_SEGMENT_TEMPLATE_FIXED								\
 	"        <SegmentTemplate\n"												\
 	"            timescale=\"1000\"\n"											\
-	"            media=\"%V%V-$Number$-$RepresentationID$.%V\"\n"				\
-	"            initialization=\"%V%V-$RepresentationID$.%V\"\n"				\
+	"            media=\"%V%V-$Number$-$RepresentationID$.%V%V\"\n"				\
+	"            initialization=\"%V%V-$RepresentationID$.%V%V\"\n"				\
 	"            duration=\"%ui\"\n"											\
 	"            startNumber=\"%uD\">\n"										\
 	"        </SegmentTemplate>\n"
@@ -127,8 +127,8 @@
 #define VOD_DASH_MANIFEST_SEGMENT_TEMPLATE_HEADER								\
 	"        <SegmentTemplate\n"												\
 	"            timescale=\"1000\"\n"											\
-	"            media=\"%V%V-$Number$-$RepresentationID$.%V\"\n"				\
-	"            initialization=\"%V%V-$RepresentationID$.%V\"\n"				\
+	"            media=\"%V%V-$Number$-$RepresentationID$.%V%V\"\n"				\
+	"            initialization=\"%V%V-$RepresentationID$.%V%V\"\n"				\
 	"            startNumber=\"%uD\">\n"										\
 	"            <SegmentTimeline>\n"
 
@@ -163,7 +163,7 @@
 	"  </Period>\n"
 
 #define VOD_DASH_MANIFEST_FOOTER												\
-    "</MPD>\n"
+		"</MPD>\n"
 
 #define MAX_TRACK_SPEC_LENGTH (sizeof("c-f-v") + 3 * VOD_INT32_LEN)
 #define MAX_MIME_TYPE_SIZE (sizeof("video/webm") - 1)

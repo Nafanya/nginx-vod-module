@@ -9,7 +9,7 @@ write_buffer_init(
 	write_buffer_state_t* state,
 	request_context_t* request_context,
 	write_callback_t write_callback,
-	void* write_context, 
+	void* write_context,
 	bool_t reuse_buffers)
 {
 	state->request_context = request_context;
@@ -24,10 +24,16 @@ write_buffer_flush(write_buffer_state_t* state, bool_t reallocate)
 {
 	vod_status_t rc;
 	size_t buffer_size;
+	ngx_buf_t tmp_write_buf;
+
+	vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
+	tmp_write_buf.temporary = 1;
 
 	if (state->cur_pos > state->start_pos)
 	{
-		rc = state->write_callback(state->write_context, state->start_pos, state->cur_pos - state->start_pos);
+		tmp_write_buf.pos = state->start_pos;
+		tmp_write_buf.last = state->cur_pos;
+		rc = state->write_callback(state->write_context, &tmp_write_buf);
 		if (rc != VOD_OK)
 		{
 			vod_log_debug1(VOD_LOG_DEBUG_LEVEL, state->request_context->log, 0,
@@ -46,8 +52,8 @@ write_buffer_flush(write_buffer_state_t* state, bool_t reallocate)
 	{
 		buffer_size = WRITE_BUFFER_SIZE;
 		state->start_pos = buffer_pool_alloc(
-			state->request_context, 
-			state->request_context->output_buffer_pool, 
+			state->request_context,
+			state->request_context->output_buffer_pool,
 			&buffer_size);
 		if (state->start_pos == NULL)
 		{

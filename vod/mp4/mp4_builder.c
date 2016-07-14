@@ -26,7 +26,7 @@ mp4_builder_get_trun_atom_size(uint32_t media_type, uint32_t frame_count)
 	return 0;
 }
 
-static u_char* 
+static u_char*
 mp4_builder_write_video_trun_atom(u_char* p, media_sequence_t* sequence, uint32_t first_frame_offset)
 {
 	media_clip_filtered_t* cur_clip;
@@ -75,7 +75,7 @@ mp4_builder_write_video_trun_atom(u_char* p, media_sequence_t* sequence, uint32_
 	return p;
 }
 
-static u_char* 
+static u_char*
 mp4_builder_write_audio_trun_atom(u_char* p, media_sequence_t* sequence, uint32_t first_frame_offset)
 {
 	media_clip_filtered_t* cur_clip;
@@ -117,7 +117,7 @@ mp4_builder_write_audio_trun_atom(u_char* p, media_sequence_t* sequence, uint32_
 
 u_char*
 mp4_builder_write_trun_atom(
-	u_char* p, 
+	u_char* p,
 	media_sequence_t* sequence,
 	uint32_t first_frame_offset)
 {
@@ -149,12 +149,12 @@ mp4_builder_init_track(fragment_writer_state_t* state, media_track_t* track)
 	}
 }
 
-vod_status_t 
+vod_status_t
 mp4_builder_frame_writer_init(
 	request_context_t* request_context,
 	media_sequence_t* sequence,
 	write_callback_t write_callback,
-	void* write_context, 
+	void* write_context,
 	bool_t reuse_buffers,
 	fragment_writer_state_t** result)
 {
@@ -216,6 +216,10 @@ mp4_builder_frame_writer_process(fragment_writer_state_t* state)
 	uint32_t write_buffer_size = 0;
 	vod_status_t rc;
 	bool_t frame_done;
+	ngx_buf_t tmp_write_buf;
+
+	vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
+	tmp_write_buf.temporary = 1;
 
 	if (!state->frame_started)
 	{
@@ -247,7 +251,10 @@ mp4_builder_frame_writer_process(fragment_writer_state_t* state)
 			if (write_buffer != NULL)
 			{
 				// flush the write buffer
-				rc = state->write_callback(state->write_context, write_buffer, write_buffer_size);
+				tmp_write_buf.pos = write_buffer;
+				tmp_write_buf.last = write_buffer + write_buffer_size;
+
+				rc = state->write_callback(state->write_context, &tmp_write_buf);
 				if (rc != VOD_OK)
 				{
 					return rc;
@@ -274,7 +281,10 @@ mp4_builder_frame_writer_process(fragment_writer_state_t* state)
 			else
 			{
 				// buffers not contiguous, flush the write buffer
-				rc = state->write_callback(state->write_context, write_buffer, write_buffer_size);
+				tmp_write_buf.pos = write_buffer;
+				tmp_write_buf.last = write_buffer + write_buffer_size;
+
+				rc = state->write_callback(state->write_context, &tmp_write_buf);
 				if (rc != VOD_OK)
 				{
 					return rc;
@@ -305,7 +315,10 @@ mp4_builder_frame_writer_process(fragment_writer_state_t* state)
 			if (write_buffer != NULL)
 			{
 				// flush the write buffer
-				rc = state->write_callback(state->write_context, write_buffer, write_buffer_size);
+				tmp_write_buf.pos = write_buffer;
+				tmp_write_buf.last = write_buffer + write_buffer_size;
+
+				rc = state->write_callback(state->write_context, &tmp_write_buf);
 				if (rc != VOD_OK)
 				{
 					return rc;

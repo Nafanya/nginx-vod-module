@@ -2096,7 +2096,7 @@ ngx_http_vod_enable_directio(ngx_http_vod_ctx_t *ctx)
 }
 
 static vod_status_t
-ngx_http_vod_write_segment_header_buffer(void* ctx, u_char* buffer, uint32_t size)
+ngx_http_vod_write_segment_header_buffer(void* ctx, ngx_buf_t* buf)
 {
   ngx_http_vod_write_segment_context_t* context = (ngx_http_vod_write_segment_context_t*)ctx;
   ngx_chain_t *chain_head;
@@ -2118,9 +2118,7 @@ ngx_http_vod_write_segment_header_buffer(void* ctx, u_char* buffer, uint32_t siz
     return VOD_ALLOC_FAILED;
   }
 
-  b->pos = buffer;
-  b->last = buffer + size;
-  b->temporary = 1;
+  *b = *buf;
 
   chain = ngx_alloc_chain_link(context->r->pool);
   if (chain == NULL)
@@ -2143,13 +2141,13 @@ ngx_http_vod_write_segment_header_buffer(void* ctx, u_char* buffer, uint32_t siz
     context->chain_end = chain;
   }
 
-  context->total_size += size;
+  context->total_size += buf->last - buf->pos;
 
   return VOD_OK;
 }
 
 static vod_status_t
-ngx_http_vod_write_segment_buffer(void* ctx, u_char* buffer, uint32_t size)
+ngx_http_vod_write_segment_buffer(void* ctx, ngx_buf_t* buf)
 {
   ngx_http_vod_write_segment_context_t* context = (ngx_http_vod_write_segment_context_t*)ctx;
   ngx_buf_t *b;
@@ -2166,9 +2164,7 @@ ngx_http_vod_write_segment_buffer(void* ctx, u_char* buffer, uint32_t size)
     return VOD_ALLOC_FAILED;
   }
 
-  b->pos = buffer;
-  b->last = buffer + size;
-  b->temporary = 1;
+  *b = *buf;
 
   if (context->r->header_sent)
   {
@@ -2205,7 +2201,7 @@ ngx_http_vod_write_segment_buffer(void* ctx, u_char* buffer, uint32_t size)
     context->chain_end->buf = b;
   }
 
-  context->total_size += size;
+  context->total_size += buf->last - buf->pos;
 
   return VOD_OK;
 }
@@ -2217,6 +2213,7 @@ ngx_http_vod_init_frame_processing(ngx_http_vod_ctx_t *ctx)
   segment_writer_t segment_writer;
   ngx_str_t output_buffer = ngx_null_string;
   ngx_str_t content_type;
+  ngx_buf_t tmp_write_buf;
   ngx_int_t rc;
   off_t range_start;
   off_t range_end;
@@ -2282,7 +2279,12 @@ ngx_http_vod_init_frame_processing(ngx_http_vod_ctx_t *ctx)
   // write the initial buffer if provided
   if (output_buffer.len != 0)
   {
-    rc = segment_writer.write_tail(segment_writer.context, output_buffer.data, output_buffer.len);
+    vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
+    tmp_write_buf.temporary = 1;
+    tmp_write_buf.pos = output_buffer.data;
+    tmp_write_buf.last = output_buffer.data + output_buffer.len;
+
+    rc = segment_writer.write_tail(segment_writer.context, &tmp_write_buf);
     if (rc != VOD_OK)
     {
       ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,

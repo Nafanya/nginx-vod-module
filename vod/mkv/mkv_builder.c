@@ -107,7 +107,7 @@ static const u_char webm_header[] = {
 
 static vod_str_t mkv_writing_app = vod_string("nginx-vod-module");
 
-static int 
+static int
 ebml_num_size(uint64_t num)
 {
 	int result = 0;
@@ -131,7 +131,7 @@ ebml_uint_size(uint64_t num)
 	return size;
 }
 
-static u_char* 
+static u_char*
 ebml_write_num(u_char* p, uint64_t num, int size)
 {
 	int shift;
@@ -305,7 +305,7 @@ mkv_write_track(u_char* p, media_track_t* track, uint64_t track_uid)
 		write_id16(p, MKV_ID_TRACKCODECDELAY);
 		p = ebml_write_uint(p, track->media_info.codec_delay);
 	}
-	
+
 	if (track->media_info.extra_data.len != 0)
 	{
 		write_id16(p, MKV_ID_TRACKCODECPRIVATE);
@@ -393,13 +393,13 @@ mkv_write_init_segment(u_char* p, media_track_t* track, uint64_t track_uid)
 static size_t
 mkv_get_max_init_segment_size(media_track_t* track)
 {
-	return sizeof(webm_header) + 
-		EBML_MASTER_SIZE + 
-		mkv_get_max_info_size() + 
+	return sizeof(webm_header) +
+		EBML_MASTER_SIZE +
+		mkv_get_max_info_size() +
 		mkv_get_max_tracks_size(track);
 }
 
-vod_status_t 
+vod_status_t
 mkv_build_init_segment(
 	request_context_t* request_context,
 	media_track_t* track,
@@ -408,7 +408,7 @@ mkv_build_init_segment(
 {
 	size_t alloc_size;
 	u_char* p;
-	
+
 	alloc_size = mkv_get_max_init_segment_size(track);
 
 	p = vod_alloc(request_context->pool, alloc_size);
@@ -452,12 +452,12 @@ mkv_builder_init_track(mkv_fragment_writer_state_t* state, media_track_t* track)
 	}
 }
 
-vod_status_t 
+vod_status_t
 mkv_builder_frame_writer_init(
 	request_context_t* request_context,
 	media_sequence_t* sequence,
 	write_callback_t write_callback,
-	void* write_context, 
+	void* write_context,
 	bool_t reuse_buffers,
 	vod_str_t* response_header,
 	size_t* total_fragment_size,
@@ -468,7 +468,7 @@ mkv_builder_frame_writer_init(
 	frame_list_part_t* part;
 	input_frame_t* cur_frame;
 	input_frame_t* last_frame;
-	size_t 	frame_headers_size;
+	size_t	frame_headers_size;
 	uint64_t cluster_timecode;
 	uint64_t first_frame_pts_delay;
 	size_t block_data_size;
@@ -497,7 +497,7 @@ mkv_builder_frame_writer_init(
 			}
 
 			block_data_size = MKV_FRAME_HEADER_SIZE + cur_frame->size;
-			frame_headers_size += 
+			frame_headers_size +=
 				1 + ebml_num_size(block_data_size) +			// simple block
 				MKV_FRAME_HEADER_SIZE;
 		}
@@ -554,7 +554,7 @@ mkv_builder_frame_writer_init(
 	if (alloc_size != response_header->len)
 	{
 		vod_log_error(VOD_LOG_ERR, request_context->log, 0,
-			"mkv_builder_frame_writer_init: response header size %uz different than allocated size %uz", 
+			"mkv_builder_frame_writer_init: response header size %uz different than allocated size %uz",
 			response_header->len, alloc_size);
 		return VOD_UNEXPECTED;
 	}
@@ -599,6 +599,7 @@ mkv_builder_write_frame_header(mkv_fragment_writer_state_t* state)
 	uint64_t relative_pts = state->relative_dts + cur_frame->pts_delay;
 	uint16_t timecode = rescale_time(relative_pts, state->timescale, MKV_TIMESCALE);
 	u_char* p = state->frame_headers;
+	ngx_buf_t tmp_write_buf;
 	vod_status_t rc;
 
 	write_id8(p, MKV_ID_SIMPLEBLOCK);
@@ -608,7 +609,12 @@ mkv_builder_write_frame_header(mkv_fragment_writer_state_t* state)
 	write_be16(p, timecode);
 	*p++ = cur_frame->key_frame ? 0x80 : 0;		// flags
 
-	rc = state->write_callback(state->write_context, state->frame_headers, p - state->frame_headers);
+	vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
+	tmp_write_buf.temporary = 1;
+	tmp_write_buf.pos = state->frame_headers;
+	tmp_write_buf.last = p;
+
+	rc = state->write_callback(state->write_context, &tmp_write_buf);
 	if (rc != VOD_OK)
 	{
 		return rc;
@@ -652,7 +658,7 @@ mkv_builder_start_frame(mkv_fragment_writer_state_t* state)
 
 	rc = state->cur_frame_part.frames_source->start_frame(
 		state->cur_frame_part.frames_source_context,
-		state->cur_frame, 
+		state->cur_frame,
 		ULLONG_MAX);
 	if (rc != VOD_OK)
 	{
@@ -667,9 +673,13 @@ mkv_builder_frame_writer_process(void* context)
 {
 	mkv_fragment_writer_state_t* state = context;
 	u_char* read_buffer;
+	ngx_buf_t tmp_write_buf;
 	uint32_t read_size;
 	vod_status_t rc;
 	bool_t frame_done;
+
+	vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
+	tmp_write_buf.temporary = 1;
 
 	if (!state->frame_started)
 	{
@@ -686,9 +696,9 @@ mkv_builder_frame_writer_process(void* context)
 	{
 		// read some data from the frame
 		rc = state->cur_frame_part.frames_source->read(
-			state->cur_frame_part.frames_source_context, 
-			&read_buffer, 
-			&read_size, 
+			state->cur_frame_part.frames_source_context,
+			&read_buffer,
+			&read_size,
 			&frame_done);
 		if (rc != VOD_OK)
 		{
@@ -708,7 +718,9 @@ mkv_builder_frame_writer_process(void* context)
 			return VOD_AGAIN;
 		}
 
-		rc = state->write_callback(state->write_context, read_buffer, read_size);
+		tmp_write_buf.pos = read_buffer;
+		tmp_write_buf.last = read_buffer + read_size;
+		rc = state->write_callback(state->write_context, &tmp_write_buf);
 		if (rc != VOD_OK)
 		{
 			return rc;

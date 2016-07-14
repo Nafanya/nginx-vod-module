@@ -4,13 +4,13 @@
 
 #include "../buffer_pool.h"
 
-static void 
+static void
 aes_cbc_encrypt_cleanup(aes_cbc_encrypt_context_t* state)
 {
 	EVP_CIPHER_CTX_cleanup(&state->cipher);
 }
 
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt_init(
 	aes_cbc_encrypt_context_t** context,
 	request_context_t* request_context,
@@ -39,27 +39,27 @@ aes_cbc_encrypt_init(
 	}
 
 	cln->handler = (vod_pool_cleanup_pt)aes_cbc_encrypt_cleanup;
-	cln->data = state;	
+	cln->data = state;
 
 	state->callback = callback;
 	state->callback_context = callback_context;
 	state->request_context = request_context;
 
 	EVP_CIPHER_CTX_init(&state->cipher);
-	
+
 	if (1 != EVP_EncryptInit_ex(&state->cipher, EVP_aes_128_cbc(), NULL, key, iv))
 	{
 		vod_log_error(VOD_LOG_ERR, request_context->log, 0,
 			"aes_cbc_encrypt_init: EVP_EncryptInit_ex failed");
 		return VOD_ALLOC_FAILED;
 	}
-	
+
 	*context = state;
 
 	return VOD_OK;
 }
 
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt(
 	aes_cbc_encrypt_context_t* state,
 	vod_str_t* dest,
@@ -102,7 +102,7 @@ aes_cbc_encrypt(
 	return VOD_OK;
 }
 
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt_write(
 	aes_cbc_encrypt_context_t* state,
 	u_char* buffer,
@@ -111,7 +111,10 @@ aes_cbc_encrypt_write(
 	u_char* encrypted_buffer;
 	size_t required_size = aes_round_up_to_block(size);
 	size_t buffer_size = required_size;
+	ngx_buf_t tmp_write_buf;
 	int out_size;
+
+	vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
 
 	encrypted_buffer = buffer_pool_alloc(
 		state->request_context,
@@ -128,7 +131,7 @@ aes_cbc_encrypt_write(
 	{
 		// Note: this should never happen since the buffer pool size is a multiple of 16
 		vod_log_error(VOD_LOG_ERR, state->request_context->log, 0,
-			"aes_cbc_encrypt_write: allocated size %uz smaller than required size %uz", 
+			"aes_cbc_encrypt_write: allocated size %uz smaller than required size %uz",
 			buffer_size, required_size);
 		return VOD_UNEXPECTED;
 	}
@@ -145,13 +148,18 @@ aes_cbc_encrypt_write(
 		return VOD_OK;
 	}
 
-	return state->callback(state->callback_context, encrypted_buffer, out_size);
+	tmp_write_buf.temporary = 1;
+	tmp_write_buf.pos = encrypted_buffer;
+	tmp_write_buf.last = encrypted_buffer + out_size;
+
+	return state->callback(state->callback_context, &tmp_write_buf);
 }
 
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt_flush(aes_cbc_encrypt_context_t* state)
 {
 	int last_block_len;
+	ngx_buf_t tmp_write_buf;
 
 	if (1 != EVP_EncryptFinal_ex(&state->cipher, state->last_block, &last_block_len))
 	{
@@ -165,13 +173,17 @@ aes_cbc_encrypt_flush(aes_cbc_encrypt_context_t* state)
 		return VOD_OK;
 	}
 
-	return state->callback(state->callback_context, state->last_block, last_block_len);
+	vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
+	tmp_write_buf.temporary = 1;
+	tmp_write_buf.pos = state->last_block;
+	tmp_write_buf.last = state->last_block + last_block_len;
+	return state->callback(state->callback_context, &tmp_write_buf);
 }
 
 #else
 
 // empty stubs
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt_init(
 	aes_cbc_encrypt_context_t** ctx,
 	request_context_t* request_context,
@@ -183,7 +195,7 @@ aes_cbc_encrypt_init(
 	return VOD_UNEXPECTED;
 }
 
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt(
 	aes_cbc_encrypt_context_t* state,
 	vod_str_t* dest,
@@ -193,7 +205,7 @@ aes_cbc_encrypt(
 	return VOD_UNEXPECTED;
 }
 
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt_write(
 	aes_cbc_encrypt_context_t* ctx,
 	u_char* buffer,
@@ -202,7 +214,7 @@ aes_cbc_encrypt_write(
 	return VOD_UNEXPECTED;
 }
 
-vod_status_t 
+vod_status_t
 aes_cbc_encrypt_flush(aes_cbc_encrypt_context_t* ctx)
 {
 	return VOD_UNEXPECTED;

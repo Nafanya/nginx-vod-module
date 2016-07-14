@@ -93,7 +93,7 @@ void vod_log_error(vod_uint_t level, vod_log_t *log, int err,
 #define VOD_MAX_SIZE_T_VALUE NGX_MAX_SIZE_T_VALUE
 #define VOD_MAX_OFF_T_VALUE NGX_MAX_OFF_T_VALUE
 
-#define VOD_HAVE_LIB_AV_CODEC NGX_HAVE_LIB_AV_CODEC 
+#define VOD_HAVE_LIB_AV_CODEC NGX_HAVE_LIB_AV_CODEC
 #define VOD_HAVE_LIB_AV_FILTER NGX_HAVE_LIB_AV_FILTER
 #define VOD_HAVE_OPENSSL_EVP NGX_HAVE_OPENSSL_EVP
 
@@ -178,31 +178,31 @@ void vod_log_error(vod_uint_t level, vod_log_t *log, int err,
 #define vod_base64_encoded_length(len) ngx_base64_encoded_length(len)
 #define vod_base64_decoded_length(len) ngx_base64_decoded_length(len)
 
-#define VOD_LOG_STDERR            NGX_LOG_STDERR 
-#define VOD_LOG_EMERG             NGX_LOG_EMERG  
-#define VOD_LOG_ALERT             NGX_LOG_ALERT  
-#define VOD_LOG_CRIT              NGX_LOG_CRIT   
-#define VOD_LOG_ERR               NGX_LOG_ERR    
-#define VOD_LOG_WARN              NGX_LOG_WARN   
-#define VOD_LOG_NOTICE            NGX_LOG_NOTICE 
-#define VOD_LOG_INFO              NGX_LOG_INFO   
-#define VOD_LOG_DEBUG             NGX_LOG_DEBUG  
+#define VOD_LOG_STDERR            NGX_LOG_STDERR
+#define VOD_LOG_EMERG             NGX_LOG_EMERG
+#define VOD_LOG_ALERT             NGX_LOG_ALERT
+#define VOD_LOG_CRIT              NGX_LOG_CRIT
+#define VOD_LOG_ERR               NGX_LOG_ERR
+#define VOD_LOG_WARN              NGX_LOG_WARN
+#define VOD_LOG_NOTICE            NGX_LOG_NOTICE
+#define VOD_LOG_INFO              NGX_LOG_INFO
+#define VOD_LOG_DEBUG             NGX_LOG_DEBUG
 
 #define vod_log_error ngx_log_error
 
 #define VOD_LOG_DEBUG_LEVEL (NGX_LOG_DEBUG_HTTP)
 
 #define vod_log_debug0(level, log, err, fmt) \
-        ngx_log_debug0(level, log, err, fmt)
+				ngx_log_debug0(level, log, err, fmt)
 
 #define vod_log_debug1(level, log, err, fmt, arg1) \
-        ngx_log_debug1(level, log, err, fmt, arg1)
+				ngx_log_debug1(level, log, err, fmt, arg1)
 
 #define vod_log_debug2(level, log, err, fmt, arg1, arg2) \
-        ngx_log_debug2(level, log, err, fmt, arg1, arg2)
+				ngx_log_debug2(level, log, err, fmt, arg1, arg2)
 
 #define vod_log_debug3(level, log, err, fmt, arg1, arg2, arg3) \
-        ngx_log_debug3(level, log, err, fmt, arg1, arg2, arg3)
+				ngx_log_debug3(level, log, err, fmt, arg1, arg2, arg3)
 
 #define vod_log_debug4(level, log, err, fmt, arg1, arg2, arg3, arg4) \
 		ngx_log_debug4(level, log, err, fmt, arg1, arg2, arg3, arg4)
@@ -225,16 +225,16 @@ typedef ngx_uint_t vod_uint_t;
 #define vod_log_buffer(level, log, err, prefix, buffer, size)	\
 	if ((log)->log_level & level)								\
 		log_buffer(level, log, err, prefix, buffer, size)
-		
+
 #define MAX_DUMP_BUFFER_SIZE (100)
 
-static vod_inline void 
+static vod_inline void
 log_buffer(unsigned level, vod_log_t* log, int err, const char* prefix, const u_char* buffer, int size)
 {
 	static const char hex_chars[] = "0123456789abcdef";
 	char hex[MAX_DUMP_BUFFER_SIZE * 3 + 1];
 	char* hex_pos = hex;
-	
+
 	size = vod_min(size, MAX_DUMP_BUFFER_SIZE);
 	for (; size > 0; size--, buffer++)
 	{
@@ -243,7 +243,7 @@ log_buffer(unsigned level, vod_log_t* log, int err, const char* prefix, const u_
 		*hex_pos++ = ' ';
 	}
 	*hex_pos = '\0';
-	
+
 	vod_log_debug2(level, log, err, "%s %s", prefix, hex);
 }
 
@@ -271,7 +271,7 @@ typedef struct vod_array_part_s {
 	struct vod_array_part_s* next;
 } vod_array_part_t;
 
-typedef vod_status_t(*write_callback_t)(void* context, u_char* buffer, uint32_t size);
+typedef vod_status_t(*write_callback_t)(void* context, ngx_buf_t* buf);
 
 typedef struct {
 	write_callback_t write_tail;

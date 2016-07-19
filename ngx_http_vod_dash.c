@@ -182,7 +182,7 @@ ngx_http_vod_dash_mp4_init_frame_processor(
 	if (conf->drm_enabled &&
 		submodule_context->request_params.segment_index >= conf->drm_clear_lead_segment_count)
 	{
-		// encyrpted fragment
+		// encrypted fragment
 		rc = edash_packager_get_fragment_writer(
 			&edash_writer,
 			&submodule_context->request_context,

@@ -2141,7 +2141,7 @@ ngx_http_vod_write_segment_header_buffer(void* ctx, ngx_buf_t* buf)
     context->chain_end = chain;
   }
 
-  context->total_size += buf->last - buf->pos;
+  context->total_size += ngx_buf_size(buf);
 
   return VOD_OK;
 }
@@ -2201,7 +2201,7 @@ ngx_http_vod_write_segment_buffer(void* ctx, ngx_buf_t* buf)
     context->chain_end->buf = b;
   }
 
-  context->total_size += buf->last - buf->pos;
+  context->total_size += ngx_buf_size(buf);
 
   return VOD_OK;
 }
@@ -2348,6 +2348,9 @@ ngx_http_vod_process_media_frames(ngx_http_vod_ctx_t *ctx)
       return ngx_http_vod_status_to_ngx_error(rc);
     }
 
+    ngx_log_error(NGX_LOG_WARN, ctx->submodule_context.request_context.log, 0,
+                  "ngx_http_vod_process_media_frames: reading of files is initialized");
+
     // get a buffer to read into
     read_cache_get_read_buffer(
       &ctx->read_cache_state,
@@ -2397,6 +2400,9 @@ ngx_http_vod_finalize_segment_response(ngx_http_vod_ctx_t *ctx)
 {
   ngx_http_request_t *r = ctx->submodule_context.r;
   ngx_int_t rc;
+
+  ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                 "ngx_http_vod_finalize_segment_response: FINALIZE");
 
   // if we already sent the headers and all the buffers, just signal completion and return
   if (r->header_sent)

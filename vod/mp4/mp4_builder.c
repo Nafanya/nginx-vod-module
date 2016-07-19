@@ -1,5 +1,7 @@
 #include "mp4_builder.h"
 #include "mp4_defs.h"
+#include "../input/frames_source_cache.h"
+#include "../../ngx_file_reader.h"
 
 u_char*
 mp4_builder_write_mfhd_atom(u_char* p, uint32_t segment_index)
@@ -217,8 +219,84 @@ mp4_builder_frame_writer_process(fragment_writer_state_t* state)
 	vod_status_t rc;
 	bool_t frame_done;
 	ngx_buf_t tmp_write_buf;
+	frames_source_cache_state_t* cache_state;
+	ngx_file_reader_state_t* reader_context;
+	uint64_t offset_begin;
+	uint64_t offset_end;
 
 	vod_memzero(&tmp_write_buf, sizeof(ngx_buf_t));
+	tmp_write_buf.in_file = 1;
+
+	if (!state->frame_started)
+	{
+		if (!mp4_builder_move_to_next_frame(state))
+		{
+			return VOD_OK;
+		}
+
+		state->frame_started = TRUE;
+	}
+
+	for (;;)
+	{
+		vod_log_error(VOD_LOG_WARN, state->request_context->log, 0,
+									"mp4_builder_frame_writer_process: non-contiguous frames");
+
+		cache_state = state->cur_frame_part.frames_source_context;
+		reader_context = cache_state->req.source->reader_context;
+		tmp_write_buf.file = &reader_context->file;
+
+		offset_begin = state->cur_frame->offset;
+		offset_end = offset_begin + state->cur_frame->size;
+
+		state->cur_frame++;
+
+		for ( ; state->cur_frame < state->cur_frame_part.last_frame; state->cur_frame++)
+		{
+			// frames are contiguous, just shift right edge
+			if (state->cur_frame->offset == offset_end)
+			{
+				offset_end += state->cur_frame->size;
+			}
+			else // we need to flush buffer first
+			{
+				vod_log_error(VOD_LOG_WARN, state->request_context->log, 0,
+											"mp4_builder_frame_writer_process: non-contiguous frames");
+
+				tmp_write_buf.file_pos = offset_begin;
+				tmp_write_buf.file_last = offset_end;
+
+				rc = state->write_callback(state->write_context, &tmp_write_buf);
+				if (rc != VOD_OK)
+				{
+					return rc;
+				}
+
+				offset_begin = state->cur_frame->offset;
+				offset_end = offset_begin + state->cur_frame->size;
+			}
+		}
+
+		tmp_write_buf.file_pos = offset_begin;
+		tmp_write_buf.file_last = offset_end;
+
+		rc = state->write_callback(state->write_context, &tmp_write_buf);
+		if (rc != VOD_OK)
+		{
+			return rc;
+		}
+
+		if (!mp4_builder_move_to_next_frame(state))
+		{
+			return VOD_OK;
+		}
+	}
+
+	/*
+	// Since we are using sendfile, we don't read anything, so there is no point in
+	// returning VOD_AGAIN ever
+	return VOD_OK;
+
 	tmp_write_buf.temporary = 1;
 
 	if (!state->frame_started)
@@ -339,4 +417,5 @@ mp4_builder_frame_writer_process(fragment_writer_state_t* state)
 			return rc;
 		}
 	}
+	*/
 }

@@ -19,9 +19,23 @@ typedef struct {
 	int64_t offset;
 } align_to_key_frames_context_t;
 
-vod_status_t 
+vod_status_t
 segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool)
 {
+	vod_status_t rc;
+
+	if (conf->adaptation_durations != NULL)
+	{
+		rc = segmenter_init_adaptations_config(conf, pool);
+		if (rc != VOD_AGAIN)
+		{
+			return rc;
+		}
+	}
+
+	ngx_log_debug0(NGX_LOG_DEBUG_HTTP, pool->log, 0,
+								 "LETS PLAY #6");
+
 	vod_str_t* cur_str;
 	uint32_t* buffer;
 	uint32_t cur_pos = 0;
@@ -74,13 +88,13 @@ segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool)
 	for (i = 0; i < conf->bootstrap_segments_count; i++)
 	{
 		cur_str = (vod_str_t*)conf->bootstrap_segments->elts + i;
-		
+
 		cur_duration = vod_atoi(cur_str->data, cur_str->len);
 		if (cur_duration < MIN_SEGMENT_DURATION)
 		{
 			return VOD_BAD_DATA;
 		}
-		
+
 		conf->bootstrap_segments_durations[i] = cur_duration;
 		conf->bootstrap_segments_start[i] = cur_pos;
 		conf->bootstrap_segments_mid[i] = cur_pos + conf->bootstrap_segments_durations[i] / 2;
@@ -95,6 +109,56 @@ segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool)
 	conf->bootstrap_segments_total_duration = cur_pos;
 
 	return VOD_OK;
+}
+
+static vod_status_t
+segmenter_init_adaptations_config(segmenter_conf_t* conf, vod_pool_t* pool)
+{
+	vod_array_t  *adaptation_list, **tmp_list;
+	vod_str_t    *value;
+	vod_int_t     i, n;
+
+	if (conf->adaptation_durations->nelts == 1)
+	{
+		adaptation_list = vod_alloc(pool, sizeof(vod_array_t));
+		if (adaptation_list == NULL)
+		{
+			return VOD_ALLOC_FAILED;
+		}
+
+		tmp_list = conf->adaptation_durations->elts;
+		*adaptation_list = *tmp_list[0];
+		conf->adaptation_durations = NULL;
+
+		n = adaptation_list->nelts;
+
+		if (n <= 0)
+		{
+			return VOD_BAD_DATA;
+		}
+
+		adaptation_list->nelts--;
+		if (adaptation_list->nelts > 0)
+		{
+			conf->bootstrap_segments = adaptation_list;
+		}
+		else
+		{
+			conf->bootstrap_segments = NULL;
+		}
+
+		value = adaptation_list->elts;
+		conf->segment_duration = vod_atoi(value[n - 1].data, value[n - 1].len);
+		if (conf->segment_duration < MIN_SEGMENT_DURATION)
+		{
+			return VOD_BAD_DATA;
+		}
+
+		return VOD_AGAIN;
+	}
+
+	// TODO: write the logic
+	return VOD_BAD_DATA;
 }
 
 uint32_t
@@ -248,8 +312,8 @@ segmenter_get_segment_index_no_discontinuity_round_up(
 
 	// bootstrap segments
 	result = 0;
-	for (cur_start_offset = conf->bootstrap_segments_start; 
-		time_millis > *cur_start_offset && result < conf->bootstrap_segments_count; 
+	for (cur_start_offset = conf->bootstrap_segments_start;
+		time_millis > *cur_start_offset && result < conf->bootstrap_segments_count;
 		cur_start_offset++)
 	{
 		result++;
@@ -259,11 +323,11 @@ segmenter_get_segment_index_no_discontinuity_round_up(
 vod_status_t
 segmenter_get_segment_index_discontinuity(
 	request_context_t* request_context,
-	segmenter_conf_t* conf, 
+	segmenter_conf_t* conf,
 	uint32_t initial_segment_index,
 	uint32_t* clip_durations,
 	uint32_t total_clip_count,
-	uint64_t time_millis, 
+	uint64_t time_millis,
 	uint32_t* result)
 {
 	uint64_t clip_start_offset;
@@ -330,16 +394,16 @@ segmenter_get_segment_index_discontinuity(
 	return VOD_OK;
 }
 
-static int64_t 
+static int64_t
 segmenter_align_to_key_frames(
-	align_to_key_frames_context_t* context, 
-	int64_t offset, 
+	align_to_key_frames_context_t* context,
+	int64_t offset,
 	int64_t limit)
 {
 	int64_t cur_duration;
 
 	for (;
-		context->offset < offset; 
+		context->offset < offset;
 		context->cur_pos++)
 	{
 		if ((void*)context->cur_pos >= context->part->last)
@@ -503,7 +567,7 @@ segmenter_get_start_end_ranges_no_discontinuity(
 		start = 0;
 		end -= clip_durations[index];
 	}
-	
+
 	result->initial_sequence_offset -= start_time;
 
 	return VOD_OK;
@@ -562,7 +626,7 @@ segmenter_get_start_end_ranges_discontinuity(
 			clip_index_segment_index = cur_segment_limit - params->initial_segment_index;
 			segment_index += clip_index_segment_index;
 		}
-		
+
 		if (clip_index > 0 && clip_index != INVALID_CLIP_INDEX)
 		{
 			clip_index--;
@@ -581,7 +645,7 @@ segmenter_get_start_end_ranges_discontinuity(
 	if (segment_index < last_segment_limit)
 	{
 		vod_log_error(VOD_LOG_ERR, request_context->log, 0,
-			"segmenter_get_start_end_ranges_discontinuity: segment index %uD smaller than last segment index %uD", 
+			"segmenter_get_start_end_ranges_discontinuity: segment index %uD smaller than last segment index %uD",
 			segment_index, last_segment_limit);
 		return VOD_BAD_REQUEST;
 	}
@@ -672,7 +736,7 @@ segmenter_get_segment_durations_estimate_internal(
 		align_context.part = sequence->key_frame_durations;
 		align_context.offset = sequence->first_key_frame_offset;
 		align_context.cur_pos = align_context.part->first;
-		alloc_count = conf->bootstrap_segments_count + total_clip_count + 
+		alloc_count = conf->bootstrap_segments_count + total_clip_count +
 			vod_div_ceil(result->end_time - result->start_time, conf->segment_duration);
 	}
 	else
@@ -797,7 +861,7 @@ segmenter_get_segment_durations_estimate_internal(
 				cur_item->discontinuity = discontinuity;
 			}
 			cur_item->repeat_count++;
-			
+
 			segment_index = clip_segment_limit;
 		}
 
@@ -966,7 +1030,7 @@ segmenter_boundary_iterator_skip(segmenter_boundary_iterator_context_t* context,
 	}
 }
 
-vod_status_t 
+vod_status_t
 segmenter_get_segment_durations_accurate(
 	request_context_t* request_context,
 	segmenter_conf_t* conf,
@@ -1030,7 +1094,7 @@ segmenter_get_segment_durations_accurate(
 				continue;
 			}
 
-			if (main_track == NULL || 
+			if (main_track == NULL ||
 				(cur_track->media_info.media_type < main_track->media_info.media_type))
 			{
 				main_track = cur_track;
@@ -1167,9 +1231,9 @@ post_bootstrap:
 		}
 		accum_duration += cur_frame->duration;
 	}
-	
+
 	// in case the main video track is shorter than the audio track, add the estimated durations of the remaining audio-only segments
-	if (main_track->media_info.duration_millis < duration_millis && 
+	if (main_track->media_info.duration_millis < duration_millis &&
 		!align_to_key_frames)
 	{
 		segmenter_boundary_iterator_init(&boundary_iterator, conf, result->segment_count);
@@ -1177,7 +1241,7 @@ post_bootstrap:
 
 		total_duration = rescale_time(longest_track->media_info.duration, longest_track->media_info.timescale, result->timescale);
 
-		while (accum_duration < total_duration && 
+		while (accum_duration < total_duration &&
 			segment_index + 1 < result->segment_count)
 		{
 			segment_limit_millis = segmenter_boundary_iterator_next(&boundary_iterator);
@@ -1196,7 +1260,7 @@ post_bootstrap:
 				cur_item->discontinuity = FALSE;
 			}
 			cur_item->repeat_count++;
-			
+
 			// move to the next segment
 			segment_index++;
 			segment_start = accum_duration;

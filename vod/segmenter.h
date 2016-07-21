@@ -69,6 +69,7 @@ struct segmenter_conf_s {
 	// config fields
 	uintptr_t segment_duration;
 	vod_array_t* bootstrap_segments;		// array of vod_str_t
+	vod_array_t* adaptation_durations;  // array of arrays of vod_str_t
 	bool_t align_to_key_frames;
 	intptr_t live_segment_count;
 	segmenter_get_segment_count_t get_segment_count;			// last short / last long / last rounded
@@ -84,10 +85,16 @@ struct segmenter_conf_s {
 	uint32_t* bootstrap_segments_start;
 	uint32_t* bootstrap_segments_mid;
 	uint32_t* bootstrap_segments_end;
+
+	// subconfigurations (in case adaptation_durations is provided)
+	vod_array_t* adaptation_configs; // array of segmenter_conf_t
+	vod_int_t    current_adaptation; // index of current adaptation
 };
 
 // init
 vod_status_t segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool);
+
+static vod_status_t segmenter_init_adaptations_config(segmenter_conf_t* conf, vod_pool_t* pool);
 
 // get segment count modes
 uint32_t segmenter_get_segment_count_last_short(segmenter_conf_t* conf, uint64_t duration_millis);
@@ -128,7 +135,7 @@ vod_status_t segmenter_get_segment_index_discontinuity(
 	uint32_t initial_segment_index,
 	uint32_t* clip_durations,
 	uint32_t total_clip_count,
-	uint64_t time_millis, 
+	uint64_t time_millis,
 	uint32_t* result);
 
 // get start end ranges

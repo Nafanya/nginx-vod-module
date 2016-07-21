@@ -136,6 +136,8 @@ ngx_http_vod_create_loc_conf(ngx_conf_t *cf)
 	conf->segmenter.segment_duration = NGX_CONF_UNSET_UINT;
 	conf->segmenter.live_segment_count = NGX_CONF_UNSET;
 	conf->segmenter.bootstrap_segments = NGX_CONF_UNSET_PTR;
+	conf->segmenter.adaptation_durations = NGX_CONF_UNSET_PTR;
+	conf->segmenter.adaptation_configs = NULL;
 	conf->segmenter.align_to_key_frames = NGX_CONF_UNSET;
 	conf->segmenter.get_segment_count = NGX_CONF_UNSET_PTR;
 	conf->segmenter.get_segment_durations = NGX_CONF_UNSET_PTR;
@@ -201,6 +203,7 @@ ngx_http_vod_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 	ngx_conf_merge_uint_value(conf->segmenter.segment_duration, prev->segmenter.segment_duration, 10000);
 	ngx_conf_merge_value(conf->segmenter.live_segment_count, prev->segmenter.live_segment_count, 3);
 	ngx_conf_merge_ptr_value(conf->segmenter.bootstrap_segments, prev->segmenter.bootstrap_segments, NULL);
+	ngx_conf_merge_ptr_value(conf->segmenter.adaptation_durations, prev->segmenter.adaptation_durations, NULL);
 	ngx_conf_merge_value(conf->segmenter.align_to_key_frames, prev->segmenter.align_to_key_frames, 0);
 	ngx_conf_merge_ptr_value(conf->segmenter.get_segment_count, prev->segmenter.get_segment_count, segmenter_get_segment_count_last_short);
 	ngx_conf_merge_ptr_value(conf->segmenter.get_segment_durations, prev->segmenter.get_segment_durations, segmenter_get_segment_durations_estimate);
@@ -709,9 +712,11 @@ ngx_http_vod_try_suburis_middle_command(ngx_conf_t *cf, ngx_command_t *cmd, void
 
 	a = (ngx_array_t **) (p + cmd->offset);
 
-	if (*a == NGX_CONF_UNSET_PTR) {
+	if (*a == NGX_CONF_UNSET_PTR)
+	{
 		*a = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
-		if (*a == NULL) {
+		if (*a == NULL)
+		{
 			return NGX_CONF_ERROR;
 		}
 	}
@@ -719,18 +724,69 @@ ngx_http_vod_try_suburis_middle_command(ngx_conf_t *cf, ngx_command_t *cmd, void
 	value = cf->args->elts;
 	n = cf->args->nelts;
 
-	for (i = 1; i < n; i++) {
+	for (i = 1; i < n; i++)
+	{
 		s = ngx_array_push(*a);
-		if (s == NULL) {
+		if (s == NULL)
+		{
 			return NGX_CONF_ERROR;
 		}
 
 		*s = value[i];
 	}
 
-	if (cmd->post) {
+	if (cmd->post)
+	{
 		post = cmd->post;
 		return post->post_handler(cf, post, *a);
+	}
+
+	return NGX_CONF_OK;
+}
+
+static char *
+ngx_http_vod_adaptation_durations_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+	char              *p = conf;
+	ngx_array_t      **a, **ls;
+	ngx_str_t         *value, *s;
+	uint32_t           i, n;
+
+	a = (ngx_array_t **) (p + cmd->offset);
+
+	if (*a == NGX_CONF_UNSET_PTR)
+	{
+		*a = ngx_array_create(cf->pool, 4, sizeof(ngx_array_t*));
+		if (*a == NULL)
+		{
+			return NGX_CONF_ERROR;
+		}
+	}
+
+	ls = ngx_array_push(*a);
+	if (ls == NULL)
+	{
+		return NGX_CONF_ERROR;
+	}
+
+	*ls = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
+	if (*ls == NULL)
+	{
+		return NGX_CONF_ERROR;
+	}
+
+	value = cf->args->elts;
+	n = cf->args->nelts;
+
+	for (i = 1; i < n; i++)
+	{
+		s = ngx_array_push(*ls);
+		if (s == NULL)
+		{
+			return NGX_CONF_ERROR;
+		}
+
+		*s = value[i];
 	}
 
 	return NGX_CONF_OK;
@@ -932,6 +988,13 @@ ngx_command_t ngx_http_vod_commands[] = {
 	ngx_conf_set_str_array_slot,
 	NGX_HTTP_LOC_CONF_OFFSET,
 	offsetof(ngx_http_vod_loc_conf_t, segmenter.bootstrap_segments),
+	NULL },
+
+	{ ngx_string("vod_adaptation_durations"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_ANY,
+	ngx_http_vod_adaptation_durations_command,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(ngx_http_vod_loc_conf_t, segmenter.adaptation_durations),
 	NULL },
 
 	{ ngx_string("vod_align_segments_to_key_frames"),

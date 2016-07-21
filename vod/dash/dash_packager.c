@@ -178,7 +178,7 @@ typedef struct {
 	write_tags_callback_t write_representation_tags;
 	void* representation_tags_writer_context;
 	u_char* base_url_temp_buffer;
-	segment_durations_t segment_durations[MEDIA_TYPE_COUNT];
+	segment_durations_t segment_durations[MEDIA_TYPE_COUNT * MAX_SEQUENCES];
 	segment_duration_item_t** cur_duration_items;
 	uint32_t clip_index;
 	uint64_t clip_start_offset;

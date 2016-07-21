@@ -112,13 +112,50 @@ segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool)
 }
 
 static vod_status_t
+segmenter_adaptation_durations_to_conf(segmenter_conf_t* conf, vod_array_t* adaptation_list)
+{
+	vod_str_t    *value;
+	vod_int_t n = adaptation_list->nelts;
+
+	if (n <= 0)
+	{
+		return VOD_BAD_DATA;
+	}
+
+	conf->adaptation_configs = NULL;
+	conf->adaptation_durations = NULL;
+
+	adaptation_list->nelts--;
+	if (adaptation_list->nelts > 0)
+	{
+		conf->bootstrap_segments = adaptation_list;
+	}
+	else
+	{
+		conf->bootstrap_segments = NULL;
+	}
+
+	value = adaptation_list->elts;
+	conf->segment_duration = vod_atoi(value[n - 1].data, value[n - 1].len);
+	if (conf->segment_duration < MIN_SEGMENT_DURATION)
+	{
+		return VOD_BAD_DATA;
+	}
+
+	return VOD_OK;
+}
+
+static vod_status_t
 segmenter_init_adaptations_config(segmenter_conf_t* conf, vod_pool_t* pool)
 {
-	vod_array_t  *adaptation_list, **tmp_list;
-	vod_str_t    *value;
-	vod_int_t     i, n;
+	vod_array_t  **tmp_list, *adaptation_list;
+	vod_status_t   rc;
+	vod_int_t      n, i;
 
-	if (conf->adaptation_durations->nelts == 1)
+	tmp_list = conf->adaptation_durations->elts;
+	n = conf->adaptation_durations->nelts;
+
+	if (n == 1)
 	{
 		adaptation_list = vod_alloc(pool, sizeof(vod_array_t));
 		if (adaptation_list == NULL)
@@ -126,45 +163,75 @@ segmenter_init_adaptations_config(segmenter_conf_t* conf, vod_pool_t* pool)
 			return VOD_ALLOC_FAILED;
 		}
 
-		tmp_list = conf->adaptation_durations->elts;
 		*adaptation_list = *tmp_list[0];
-		conf->adaptation_durations = NULL;
-
-		n = adaptation_list->nelts;
-
-		if (n <= 0)
+		rc = segmenter_adaptation_durations_to_conf(conf, adaptation_list);
+		if (rc != VOD_OK)
 		{
-			return VOD_BAD_DATA;
-		}
-
-		adaptation_list->nelts--;
-		if (adaptation_list->nelts > 0)
-		{
-			conf->bootstrap_segments = adaptation_list;
-		}
-		else
-		{
-			conf->bootstrap_segments = NULL;
-		}
-
-		value = adaptation_list->elts;
-		conf->segment_duration = vod_atoi(value[n - 1].data, value[n - 1].len);
-		if (conf->segment_duration < MIN_SEGMENT_DURATION)
-		{
-			return VOD_BAD_DATA;
+			return rc;
 		}
 
 		return VOD_AGAIN;
 	}
 
-	// TODO: write the logic
-	return VOD_BAD_DATA;
+	conf->adaptation_configs = vod_alloc(pool, n * sizeof(segmenter_conf_t));
+
+	for (i = 0; i < n; i++)
+	{
+		adaptation_list = vod_alloc(pool, sizeof(vod_array_t));
+		if (adaptation_list == NULL)
+		{
+			return VOD_ALLOC_FAILED;
+		}
+
+		*adaptation_list = *tmp_list[i];
+		rc = segmenter_adaptation_durations_to_conf(&conf->adaptation_configs[i], adaptation_list);
+		if (rc != VOD_OK)
+		{
+			return rc;
+		}
+
+		conf->adaptation_configs[i].align_to_key_frames = conf->align_to_key_frames;
+		conf->adaptation_configs[i].live_segment_count = conf->live_segment_count;
+		conf->adaptation_configs[i].get_segment_count = conf->get_segment_count;
+		conf->adaptation_configs[i].get_segment_durations = conf->get_segment_durations;
+
+		rc = segmenter_init_config(&conf->adaptation_configs[i], pool);
+		if (rc != VOD_OK)
+		{
+			return rc;
+		}
+	}
+
+	return VOD_OK;
+}
+
+void
+segmenter_set_sequence_index(segmenter_conf_t* conf, uint32_t sequences_mask)
+{
+	vod_uint_t i;
+
+	conf->cur_adaptation = 0;
+	for (i = 0; i < 32; i++)
+	{
+		if ((1 << i) & sequences_mask)
+		{
+			conf->cur_adaptation = i;
+			break;
+		}
+	}
+
+	if (conf->cur_adaptation >= conf->adaptation_durations->nelts)
+	{
+		conf->cur_adaptation = conf->adaptation_durations->nelts - 1;
+	}
 }
 
 uint32_t
 segmenter_get_segment_count_last_short(segmenter_conf_t* conf, uint64_t duration_millis)
 {
 	uint32_t result;
+
+	SEGMENT_CHOOSE_HEADER(conf);
 
 	if (duration_millis == 0)
 	{
@@ -194,6 +261,8 @@ uint32_t
 segmenter_get_segment_count_last_long(segmenter_conf_t* conf, uint64_t duration_millis)
 {
 	uint32_t result;
+
+	SEGMENT_CHOOSE_HEADER(conf);
 
 	if (duration_millis == 0)
 	{
@@ -227,6 +296,8 @@ uint32_t
 segmenter_get_segment_count_last_rounded(segmenter_conf_t* conf, uint64_t duration_millis)
 {
 	uint32_t result;
+
+	SEGMENT_CHOOSE_HEADER(conf);
 
 	if (duration_millis == 0)
 	{
@@ -279,6 +350,8 @@ segmenter_get_segment_index_no_discontinuity(
 	uint32_t* cur_end_offset;
 	uint32_t result;
 
+	SEGMENT_CHOOSE_HEADER(conf);
+
 	// regular segments
 	if (time_millis >= conf->bootstrap_segments_total_duration)
 	{
@@ -302,6 +375,8 @@ segmenter_get_segment_index_no_discontinuity_round_up(
 {
 	uint32_t* cur_start_offset;
 	uint32_t result;
+
+	SEGMENT_CHOOSE_HEADER(conf);
 
 	// regular segments
 	if (time_millis >= conf->bootstrap_segments_total_duration)
@@ -337,6 +412,8 @@ segmenter_get_segment_index_discontinuity(
 	uint32_t* end_duration = clip_durations + total_clip_count;
 	uint32_t clip_segment_limit;
 	uint32_t segment_index = initial_segment_index;
+
+	SEGMENT_CHOOSE_HEADER(conf);
 
 	for (cur_duration = clip_durations; ; cur_duration++)
 	{
@@ -454,6 +531,8 @@ segmenter_get_start_end_ranges_no_discontinuity(
 	uint32_t* cur_duration;
 	uint32_t segment_count;
 	uint32_t index;
+
+	SEGMENT_CHOOSE_HEADER(params->conf);
 
 	result->clip_index_segment_index = 0;
 	result->first_clip_segment_index = 0;
@@ -594,6 +673,8 @@ segmenter_get_start_end_ranges_discontinuity(
 	uint32_t clip_index = params->clip_index;
 	media_range_t* cur_clip_range;
 	uint64_t prev_clips_duration = 0;
+
+	SEGMENT_CHOOSE_HEADER(conf);
 
 	for (cur_duration = params->clip_durations;; cur_duration++)
 	{
@@ -910,6 +991,8 @@ segmenter_get_segment_durations_estimate(
 	uint64_t duration_millis;
 	uint32_t cur_media_type;
 
+	SEGMENT_CHOOSE_HEADER(conf);
+
 	if (sequence != NULL)
 	{
 		sequences_end = sequence + 1;
@@ -1058,6 +1141,8 @@ segmenter_get_segment_durations_accurate(
 	uint64_t cur_duration;
 	uint32_t duration_millis;
 	bool_t align_to_key_frames;
+
+	SEGMENT_CHOOSE_HEADER(conf);
 
 	if (media_set->durations != NULL)
 	{

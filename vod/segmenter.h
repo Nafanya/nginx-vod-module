@@ -9,6 +9,11 @@
 #define INVALID_SEGMENT_COUNT UINT_MAX
 #define SEGMENT_FROM_TIMESTAMP_MARGIN (100)		// in case of clipping, a segment may start up to 2 frames before the segment boundary
 
+// macros
+#define SEGMENT_CHOOSE_HEADER(conf) if ((conf)->adaptation_configs != NULL) { \
+		(conf) = &(conf)->adaptation_configs[(conf)->cur_adaptation];				\
+}
+
 // typedefs
 struct segmenter_conf_s;
 typedef struct segmenter_conf_s segmenter_conf_t;
@@ -87,14 +92,17 @@ struct segmenter_conf_s {
 	uint32_t* bootstrap_segments_end;
 
 	// subconfigurations (in case adaptation_durations is provided)
-	vod_array_t* adaptation_configs; // array of segmenter_conf_t
-	vod_int_t    current_adaptation; // index of current adaptation
+	struct segmenter_conf_s* adaptation_configs; // array of segmenter_conf_t
+	vod_uint_t               cur_adaptation;     // index of current adaptation
 };
 
 // init
 vod_status_t segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool);
 
 static vod_status_t segmenter_init_adaptations_config(segmenter_conf_t* conf, vod_pool_t* pool);
+
+// get necessary sequence index
+void segmenter_set_sequence_index(segmenter_conf_t* conf, uint32_t sequences_mask);
 
 // get segment count modes
 uint32_t segmenter_get_segment_count_last_short(segmenter_conf_t* conf, uint64_t duration_millis);

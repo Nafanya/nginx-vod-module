@@ -4213,7 +4213,6 @@ ngx_http_vod_parse_uri(
 		// set sequence index to segmenter till sequence mask is provided
 		if (ngx_strcasecmp((u_char *) "hls", conf->submodule.name) == 0) {
 			segmenter_set_sequence_index(&conf->segmenter, request_params->sequences_mask);
-			conf->segmenter = conf->segmenter.adaptation_configs[conf->segmenter.cur_adaptation];
 		} else {
 			conf->segmenter = conf->segmenter.adaptation_configs[0];
 		}

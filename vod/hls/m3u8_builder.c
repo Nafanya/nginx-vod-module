@@ -331,6 +331,8 @@ m3u8_builder_build_index_playlist(
 		return rc;
 	}
 
+	SEGMENT_CHOOSE_HEADER(segmenter_conf);
+
 	// get the segment durations
 	rc = segmenter_conf->get_segment_durations(
 		request_context,

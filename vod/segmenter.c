@@ -19,6 +19,9 @@ typedef struct {
 	int64_t offset;
 } align_to_key_frames_context_t;
 
+// local declarations
+static vod_status_t segmenter_init_adaptations_config(segmenter_conf_t* conf, vod_pool_t* pool);
+
 vod_status_t
 segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool)
 {

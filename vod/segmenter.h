@@ -99,8 +99,6 @@ struct segmenter_conf_s {
 // init
 vod_status_t segmenter_init_config(segmenter_conf_t* conf, vod_pool_t* pool);
 
-static vod_status_t segmenter_init_adaptations_config(segmenter_conf_t* conf, vod_pool_t* pool);
-
 // get necessary sequence index
 void segmenter_set_sequence_index(segmenter_conf_t* conf, uint32_t sequences_mask);
 

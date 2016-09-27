@@ -281,7 +281,6 @@ mp4_encrypt_video_snpf_write_buffer(void* context, ngx_buf_t* in_buf)
 	mp4_encrypt_video_state_t* state = (mp4_encrypt_video_state_t*)context;
 	u_char* buffer = in_buf->pos;
 	u_char* buffer_end = in_buf->last;
-	uint32_t size = buffer_end - buffer;
 	u_char* cur_pos = buffer;
 	u_char* cur_end_pos;
 	u_char* output;
@@ -554,7 +553,6 @@ mp4_encrypt_video_write_buffer(void* context, ngx_buf_t* in_buf)
 	vod_str_t fragment_header;
 	u_char* buffer = in_buf->pos;
 	u_char* buffer_end = in_buf->last;
-	uint32_t size = buffer_end - buffer;
 	u_char* cur_pos = buffer;
 	u_char* output;
 	ngx_buf_t tmp_write_buf;
@@ -907,7 +905,6 @@ mp4_encrypt_audio_write_buffer(void* context, ngx_buf_t* in_buf)
 	mp4_encrypt_state_t* state = (mp4_encrypt_state_t*)context;
 	u_char* buffer = in_buf->pos;
 	u_char* buffer_end = in_buf->last;
-	uint32_t size = buffer_end - buffer;
 	u_char* cur_pos = buffer;
 	uint32_t write_size;
 	bool_t ignore;

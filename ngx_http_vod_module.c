@@ -1624,8 +1624,8 @@ ngx_http_vod_state_machine_parse_metadata(ngx_http_vod_ctx_t *ctx)
 				}
 				else if (rc != NGX_AGAIN && rc != NGX_DONE)
 				{
-					ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-						"ngx_http_vod_state_machine_parse_metadata: open_file failed %i", rc);
+					ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+						"ngx_http_vod_state_machine_parse_metadata: open_file failed with unexpected code %i", rc);
 				}
 				return rc;
 			}

@@ -768,8 +768,27 @@ If the value is negative, nginx vod will return the last -vod_live_segment_count
 * **context**: `http`, `server`, `location`
 
 Adds a bootstrap segment duration in milliseconds. This setting can be used to make the first few segments
-shorter than the default segment duration, thus making the adaptive flavor selection kick-in earlier without 
+shorter than the default segment duration, thus making the adaptive flavor selection kick-in earlier without
 the overhead of short segments throughout the video.
+
+#### vod_adaptation_durations
+* **syntax**: `vod_adaptation_durations duration1 [duration2 duration3 ... duration_final]`
+* **default**: `n/a`
+* **context**: `http`, `server`, `location`
+
+**Currently supported for HLS only**
+
+This directive combines functionality of `vod_bootstrap_segment_durations` and `vod_segment_duration`
+in order to be able to set different segments durations for different video adaptations.
+First `n-1` durations specify bootstrap segments length, and the last specifies common segment length.
+
+To specify different segment lengths for different adaptations, repeat the directive several times, like:
+
+    vod_adaptation_durations 3000 5000 10000;      # adaptation 1
+    vod_adaptation_durations 2000 3000 5000 10000; # adaptation 2
+    vod_adaptation_durations 2000 3000 5000 7000;  # adaptation 3
+    vod_adaptation_durations 2000 3000 4000 5000;  # adaptation 4 and all the following
+
 
 #### vod_align_segments_to_key_frames
 * **syntax**: `vod_align_segments_to_key_frames on/off`

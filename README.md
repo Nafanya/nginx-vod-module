@@ -715,8 +715,32 @@ Enables the nginx-vod status page on the enclosing location.
 
 A URL suffix that is used to identify multi URLs. A multi URL is a way to encode several different URLs
 that should be played together as an adaptive streaming set, under a single URL. When the default suffix is
-used, an HLS set URL may look like: 
+used, an HLS set URL may look like:
 http://host/hls/common-prefix,bitrate1,bitrate2,common-suffix.urlset/master.m3u8
+
+#### vod_try_suburis_middles
+* **syntax**: `vod_try_suburis_middles middle1 [middle2 middle3 ...]`
+* **default**: `n/a`
+* **context**: `http`, `server`, `location`
+
+When this directive is enabled, vod-module starts to handle simple URLs as multi URLs with middle parts defined
+by this directive and common postfix specified by directive `vod_try_suburis_postfix`
+For example, given this configuration:
+
+    vod_try_suburis_middles .240p .360p .480p .720p;
+    vod_try_suburis_postfix .mp4;
+
+URL `http://host/hls/video123/master.m3u8` is treated like `http://host/hls/video123,.240p,.360p,.480p,.720p,.mp4.urlset/master.m3u8`.
+This approach is useful, for example, if you want to start serving additional version of video on server without changing all
+the URLs used by clients, for sake of cache validity (or some other reason).
+
+#### vod_try_suburis_postfix
+* **syntax**: `vod_try_suburis_postfix postfix`
+* **default**: `empty`
+* **context**: `http`, `server`, `location`
+
+Sets common postfix for server-defined multi urls.
+See `vod_try_suburis_middles`
 
 #### vod_segment_duration
 * **syntax**: `vod_segment_duration duration`
@@ -815,6 +839,18 @@ Sets the base URL (scheme + domain) that should be used for delivering video seg
 The parameter value can contain variables, if the parameter evaluates to an empty string, relative URLs will be used.
 If not set, vod_base_url will be used.
 The setting currently affects only HLS.
+
+#### vod_manifest_urls_args
+* **syntax**: `vod_manifest_urls_args args`
+* **default**: `empty`
+* **context**: `http`, `server`, `location`
+
+Sets the postfix that should be appended to every url in manifest.
+The parameter value can contain variables.
+Useful for providing some url arguments, which are required for processing request successfully
+for some reason (e.g. authentication tokens).
+In order to provide valid url arguments, the variable should start with '?', because it isn't added
+automatically for simplicity and generality reasons.
 
 #### vod_open_file_thread_pool
 * **syntax**: `vod_open_file_thread_pool pool_name`
